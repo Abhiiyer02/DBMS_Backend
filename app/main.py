@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth,users
+from routers import auth, hospitals, staff
 import models
 from database import engine
 
@@ -22,8 +22,9 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(users.router)
+app.include_router(hospitals.router)
+app.include_router(staff.router)
 
-@app.get("/")
-async def root():
-    return {"Hello": "World"}
+# @app.get("/")
+# async def root():
+#     return {"Hello": "World"}
