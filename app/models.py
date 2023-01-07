@@ -1,4 +1,4 @@
-from sqlalchemy import Column,Integer, String, Date
+from sqlalchemy import Column,Integer, String, Date, ForeignKey
 
 from database import Base
 
@@ -59,9 +59,12 @@ class Request(Base):
     __tablename__ = "requests"
 
     request_id = Column(String, primary_key=True, index=True,nullable=False)
+    hospital_id = Column(String, ForeignKey("hospitals.hospital_id"),nullable=True)
     patient_case = Column(String,nullable=True)
     blood_group = Column(String,nullable=True)
+    blood_component = Column(String,nullable=True)
     quantity = Column(Integer,nullable=True)
+    status = Column(String,nullable=True,default="pending")
 
 class Donation(Base):
     __tablename__ = "donations"

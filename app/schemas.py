@@ -38,7 +38,7 @@ class StaffIn(StaffBase):
 class Patient(BaseModel):
     patient_id: int
     name: str
-    dob: str
+    dob: date
     address: str
     phone: str
 
@@ -48,6 +48,37 @@ class Repository(BaseModel):
     plasma: int
     platelets: int
     rbc: int
+    
+
+class RequestBase(BaseModel):
+    hospital_id: str
+    patient_case: str
+    blood_group: str
+    blood_component: str
+    quantity: int
+
+
+    class Config:
+        orm_mode = True
+
+class Request(RequestBase):
+    request_id: str
+    status: str
+
+class DonorBase(BaseModel):
+    name: str
+    gender: str
+    dob: date
+    blood_group: str
+    phone:str
+    address: str
+
+
+
+class BloodComponent(BaseModel):
+    packet_id: str
+    component_type:str
+    blood_id: str
 
 class Token(BaseModel):
     access_token: str
