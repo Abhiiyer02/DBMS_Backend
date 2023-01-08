@@ -68,12 +68,16 @@ class Request(RequestBase):
 class DonorBase(BaseModel):
     name: str
     gender: str
-    dob: date
+    dob: str
     blood_group: str
     phone:str
     address: str
 
+    class Config:
+        orm_mode = True
 
+class Donor(DonorBase):
+    donor_id: str
 
 class BloodComponent(BaseModel):
     packet_id: str
