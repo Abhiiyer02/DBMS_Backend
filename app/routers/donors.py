@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from database import get_db
 from datetime import date
+from phonenumbers import parse, is_possible_number
 
 router = APIRouter(
     prefix="/donors",
@@ -32,7 +33,10 @@ def get_donors_addresses(db: Session = Depends(get_db)):
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
 def create_donor(request: schemas.DonorBase, db: Session = Depends(get_db)):
-    print(request.dob)
+    phone_number = parse(request.phone, "IN")
+    if not is_possible_number(phone_number):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid phone number")
+
     db_donor = db.query(models.Donor).filter(models.Donor.name == request.name).first()
     
     if db_donor:
@@ -44,7 +48,7 @@ def create_donor(request: schemas.DonorBase, db: Session = Depends(get_db)):
         donor_id = 'D' + str(int(db_donor.donor_id[1:]) + 1).zfill(4)
     
     dob = request.dob.split('/')
-    
+
     new_donor = models.Donor(
     donor_id=donor_id, 
     name=request.name, 
