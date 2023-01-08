@@ -7,6 +7,28 @@ router = APIRouter(
     prefix="/requests",
     tags=['Requests'])
 
+@router.get('/blood_rate',response_model=dict())
+def get_blood_rate():
+    blood_rate = dict()
+    blood_rate['platelets'] = 400
+    blood_rate['plasma'] = 400
+    blood_rate['RBC'] = 1450
+    blood_rate['whole_blood'] = 1450
+    return blood_rate
+
+@router.get('/repository_initialize', response_model=list[schemas.Repository])
+def repository_initialize(db: Session = Depends(get_db)):
+    blood_groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+    blood_components = ['Platelets', 'Plasma', 'RBC', 'Whole Blood']
+
+    for blood_group in blood_groups:
+        new_repository = models.Repository(blood_group=blood_group,plasma=0,platelets=0,rbc=0)
+
+        db.add(new_repository)
+        db.commit()
+        db.refresh(new_repository)
+    return Response(status_code=status.HTTP_201_CREATED)
+
 @router.get('/{hospital_id}', response_model=list[schemas.Request])
 def get_requests_by_hospital_id(hospital_id: str, db: Session = Depends(get_db)):
     requests = db.query(models.Request).filter(models.Request.hospital_id == hospital_id).all()
@@ -24,16 +46,52 @@ def create_request(request: schemas.RequestBase, db: Session = Depends(get_db)):
 
     request_id = generate_id(request.blood_group, db)
 
+    db_platelets = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group, models.Repository.blood_component == 'Platelets')
+    
+    db_plasma = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group, models.Repository.blood_component == 'Plasma')
+        
+    db_rbc = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group, models.Repository.blood_component == 'RBC')
+    
+    status = 'Success'
+    if request.blood_component == 'Platelets' and db_platelets.count() < request.quantity:
+            status = 'Pending'
+    
+    if request.blood_component == 'Plasma' and db_plasma.count() < request.quantity:
+            status = 'Pending'
+
+    if request.blood_component == 'RBC' and db_rbc.count() < request.quantity:
+            status = 'Pending'
+    
+    if request.blood_component == 'Whole Blood' and (db_rbc.count() < request.quantity or db_plasma.count() < request.quantity or db_platelets.count() < request.quantity):
+            status = 'Pending'
+    
     new_request = models.Request(
-    request_id=request_id, 
-    hospital_id=request.hospital_id,
-    patient_case=request.patient_case,
-    blood_group=request.blood_group, 
-    blood_component=request.blood_component,
-    quantity=request.quantity)
+        request_id=request_id, 
+        hospital_id=request.hospital_id,
+        patient_case=request.patient_case,
+        blood_group=request.blood_group, 
+        blood_component=request.blood_component,
+        quantity=request.quantity,
+        status = status)
+
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
+
+    if status == 'Success':
+        if request.blood_component == 'Platelets':
+            db_platelets.update(quantity = db_platelets.count() - request.quantity)
+        elif request.blood_component == 'Plasma':
+            db_plasma.update(quantity = db_plasma.count() - request.quantity)
+        elif request.blood_component == 'RBC':
+            db_rbc.update(quantity = db_rbc.count() - request.quantity)
+        else:
+            db_platelets.update(quantity = db_platelets.count() - request.quantity)
+            db_plasma.update(quantity = db_plasma.count() - request.quantity)
+            db_rbc.update(quantity = db_rbc.count() - request.quantity)
+
+        db.commit()
+
     return Response(status_code=status.HTTP_201_CREATED)
 
 
@@ -79,3 +137,4 @@ def generate_id(blood_group: str,db: Session):
         if db_request:
             request_id = 'RON' + str(int(db_request.request_id[3:]) + 1).zfill(3)
     return request_id
+

@@ -9,15 +9,15 @@ router = APIRouter(
     prefix="/donors",
     tags=['Donors'])
 
-@router.get('/', response_model=list[schemas.Donor])
-def get_donors(locality:str = '',blood_group: str = '',db: Session = Depends(get_db)):
+@router.get('/', response_model=list[schemas.DonorOut])
+def get_donors_by_address_and_blood_group(locality:str = '',blood_group: str = '',db: Session = Depends(get_db)):
     if locality == '' and blood_group == '':
         db_donors = db.query(models.Donor).all()
     elif locality == '':
+        db_donors = db.query(models.Donor).filter(models.Donor.blood_group == blood_group).all()
+    elif blood_group == '':
         address = locality + ', Mysuru'
         db_donors = db.query(models.Donor).filter(models.Donor.address == address).all()
-    elif blood_group == '':
-        db_donors = db.query(models.Donor).filter(models.Donor.blood_group == blood_group).all()
     else:
         address = locality + ', Mysuru'
         db_donors = db.query(models.Donor).filter(models.Donor.address == address, models.Donor.blood_group == blood_group).all()
@@ -48,15 +48,18 @@ def create_donor(request: schemas.DonorBase, db: Session = Depends(get_db)):
         donor_id = 'D' + str(int(db_donor.donor_id[1:]) + 1).zfill(4)
     
     dob = request.dob.split('/')
+    address = request.address + ', Mysuru'
 
     new_donor = models.Donor(
     donor_id=donor_id, 
     name=request.name, 
-    address = request.address,
+    address = address,
     phone = request.phone,
     dob = date(int(dob[2]),int(dob[1]),int(dob[0])),
     gender = request.gender,
     blood_group = request.blood_group)
+
+    
 
     db.add(new_donor)
     db.commit()

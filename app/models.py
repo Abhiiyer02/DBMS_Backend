@@ -1,4 +1,5 @@
-from sqlalchemy import Column,Integer, String, Date, ForeignKey
+from sqlalchemy import Column,Integer, String, Date, ForeignKey, Boolean
+from datetime import datetime, timedelta
 
 from database import Base
 
@@ -49,8 +50,7 @@ class Donor(Base):
 class Repository(Base):
     __tablename__ = "repository"
 
-    blood_id = Column(String, primary_key=True, index=True,nullable=False)
-    blood_group = Column(String,nullable=True)
+    blood_group = Column(String,primary_key = True,nullable=False)
     plasma = Column(Integer,nullable=True)
     platelets = Column(Integer,nullable=True)
     rbc = Column(Integer,nullable=True)
@@ -64,14 +64,30 @@ class Request(Base):
     blood_group = Column(String,nullable=True)
     blood_component = Column(String,nullable=True)
     quantity = Column(Integer,nullable=True)
-    status = Column(String,nullable=True,default="pending")
+    status = Column(String,nullable=True)
 
 class Donation(Base):
     __tablename__ = "donations"
 
     donation_id = Column(String, primary_key=True, index=True,nullable=False)
-    donor_id = Column(String,nullable=True)
-    blood_group = Column(String,nullable=True)
-    quantity = Column(Integer,nullable=True)
+    donor_id = Column(String,ForeignKey("donors.donor_id"),nullable=False)
+    staff_id = Column(String,ForeignKey("staffs.staff_id"),nullable=False)
     donation_occasion = Column(String,nullable=True)
+    blood_group = Column(String,ForeignKey("repository.blood_group"),nullable=False)
     donation_date = Column(Date,nullable=True)
+    result = Column(Boolean,nullable=True)
+
+class BloodComponents(Base):
+    __tablename__ = "blood_components"
+
+    packet_id = Column(String, primary_key=True, index=True,nullable=False)
+    component_type = Column(String)
+    blood_group = Column(String,ForeignKey("repository.blood_group"),nullable=False)
+    ext_date = Column(Date,default=datetime.today())
+
+    if component_type == "Plasma":
+        exp_date = Column(Date,default=datetime.today() + timedelta(days=365))
+    elif component_type == "Platelets":
+        exp_date = Column(Date,default=datetime.today() + timedelta(days=5))
+    else:
+        exp_date = Column(Date,default=datetime.today() + timedelta(days=42))

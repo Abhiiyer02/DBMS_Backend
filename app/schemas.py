@@ -17,7 +17,7 @@ class HospitalOut(HospitalBase):
 
 class StaffBase(BaseModel):
     name: str
-    dob: date
+    dob: str
     address: str
     phone: str
     staff_role: str
@@ -38,7 +38,7 @@ class StaffIn(StaffBase):
 class Patient(BaseModel):
     patient_id: int
     name: str
-    dob: date
+    dob: str
     address: str
     phone: str
 
@@ -48,7 +48,20 @@ class Repository(BaseModel):
     plasma: int
     platelets: int
     rbc: int
-    
+
+class DonationsBase(BaseModel):
+    donor_id: str
+    staff_id: str
+    donation_occasion: str
+    blood_group: str
+    result: str
+
+    class Config:
+        orm_mode = True
+
+class Donations(DonationsBase):
+    donation_date: str
+    donation_id: str
 
 class RequestBase(BaseModel):
     hospital_id: str
@@ -76,13 +89,24 @@ class DonorBase(BaseModel):
     class Config:
         orm_mode = True
 
-class Donor(DonorBase):
+class DonorIn(DonorBase):
     donor_id: str
 
-class BloodComponent(BaseModel):
-    packet_id: str
+class DonorOut(DonorBase):
+    donor_id: str
+    dob: date
+
+class BloodComponentBase(BaseModel):
     component_type:str
-    blood_id: str
+    blood_group: str
+    ext_date: str
+    exp_date: str
+
+    class Config:
+        orm_mode = True
+
+class BloodComponentIn(BloodComponentBase):
+    packet_id: str
 
 class Token(BaseModel):
     access_token: str
