@@ -26,30 +26,27 @@ def get_donors_by_address_and_blood_group(locality:str = '',blood_group: str = '
 
 
 @router.get('/addresses', response_model=list[str])
-def get_donors_addresses(db: Session = Depends(get_db)):
+def get_donors_addresses():
     addresses = ['Yelwala','Rupanagar','Devraj Mohalla','Tilaknagar','Jayalakshmipuram','Mandi Mohalla','Kuvempunagar','TK Layout','Udaygiri']
 
     return addresses
 
-@router.post('/', status_code=status.HTTP_201_CREATED)
+@router.post('/', status_code= status.HTTP_201_CREATED + status.HTTP_200_OK)
 def create_donor(request: schemas.DonorBase, db: Session = Depends(get_db)):
-    phone_number = parse(request.phone, "IN")
+    try:
+        phone_number = parse(request.phone, "IN")
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid phone number")
     if not is_possible_number(phone_number):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid phone number")
-
-    db_donor = db.query(models.Donor).filter(models.Donor.name == request.name).first()
-    
-    if db_donor:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Donor with name {request.name} already exists")
 
     donor_id = 'D0001'
     db_donor = db.query(models.Donor).order_by(models.Donor.donor_id.desc()).first()
     if db_donor:
         donor_id = 'D' + str(int(db_donor.donor_id[1:]) + 1).zfill(4)
     
-    dob = request.dob.split('/')
+    dob = request.dob.split('/') # yyyy/mm/dd
     address = request.address + ', Mysuru'
-
     new_donor = models.Donor(
     donor_id=donor_id, 
     name=request.name, 
@@ -59,9 +56,16 @@ def create_donor(request: schemas.DonorBase, db: Session = Depends(get_db)):
     gender = request.gender,
     blood_group = request.blood_group)
 
-    
-
     db.add(new_donor)
     db.commit()
     db.refresh(new_donor)
     return Response(status_code=status.HTTP_201_CREATED)
+
+@router.delete('/{donor_id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_donor(donor_id: str, db: Session = Depends(get_db)):
+    db_donor = db.query(models.Donor).filter(models.Donor.donor_id == donor_id).first()
+    if not db_donor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Donor with id {donor_id} not found")
+    db.delete(db_donor)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

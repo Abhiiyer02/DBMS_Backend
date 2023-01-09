@@ -89,9 +89,6 @@ class DonorBase(BaseModel):
     class Config:
         orm_mode = True
 
-class DonorIn(DonorBase):
-    donor_id: str
-
 class DonorOut(DonorBase):
     donor_id: str
     dob: date

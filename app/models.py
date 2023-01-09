@@ -73,7 +73,7 @@ class Donation(Base):
     donor_id = Column(String,ForeignKey("donors.donor_id"),nullable=False)
     staff_id = Column(String,ForeignKey("staffs.staff_id"),nullable=False)
     donation_occasion = Column(String,nullable=True)
-    blood_group = Column(String,ForeignKey("repository.blood_group"),nullable=False)
+    blood_group = Column(String,nullable=True)
     donation_date = Column(Date,nullable=True)
     result = Column(Boolean,nullable=True)
 
@@ -82,7 +82,7 @@ class BloodComponents(Base):
 
     packet_id = Column(String, primary_key=True, index=True,nullable=False)
     component_type = Column(String)
-    blood_group = Column(String,ForeignKey("repository.blood_group"),nullable=False)
+    blood_group = Column(String,nullable=True)
     ext_date = Column(Date,default=datetime.today())
 
     if component_type == "Plasma":

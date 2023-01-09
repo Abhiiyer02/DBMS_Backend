@@ -32,6 +32,11 @@ def create_donation(request: schemas.DonationsBase, db: Session = Depends(get_db
     
     result = True if request.result == 'Positive' else False
 
+    db_donor = db.query(models.Donor).filter(models.Donor.donor_id == request.donor_id).first()
+
+    if db_donor.blood_group != request.blood_group:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Donor's blood group {db_donor.blood_group} does not match with the blood group {request.blood_group} of the donation")
+
     new_donation = models.Donation(
         donation_id=donation_id, 
         donor_id=request.donor_id, 
@@ -45,13 +50,14 @@ def create_donation(request: schemas.DonationsBase, db: Session = Depends(get_db
     db.refresh(new_donation)
 
     if result:
-        blood_in_db = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group)
+        db_repository = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group)
+        
+        if not db_repository.first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Blood group {request.blood_group} not available")
 
-        if blood_in_db.first() is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Blood group {request.blood_group} not found in repository")
-
-        blood_in_db.update(blood_group = request.blood_group,platelets = models.Repository.platelets + 1, plasma = models.Repository.plasma + 1, rbc = models.Repository.rbc + 1,synchronize_session=False)
-
+        db_repository.first().platelets += 1
+        db_repository.first().plasma += 1
+        db_repository.first().rbc += 1
         db.commit()
     return Response(status_code=status.HTTP_201_CREATED)
 

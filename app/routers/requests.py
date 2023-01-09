@@ -16,18 +16,54 @@ def get_blood_rate():
     blood_rate['whole_blood'] = 1450
     return blood_rate
 
-@router.get('/repository_initialize', response_model=list[schemas.Repository])
-def repository_initialize(db: Session = Depends(get_db)):
-    blood_groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
-    blood_components = ['Platelets', 'Plasma', 'RBC', 'Whole Blood']
+# Pending Request
 
-    for blood_group in blood_groups:
-        new_repository = models.Repository(blood_group=blood_group,plasma=0,platelets=0,rbc=0)
+@router.get('/pending_request_process/{request_id}', response_model=list[schemas.Request])
+def process_request_by_ID(db: Session = Depends(get_db), request_id: str = None):
+    request = db.query(models.Request).filter(models.Request.request_id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Request not found")
 
-        db.add(new_repository)
-        db.commit()
-        db.refresh(new_repository)
+    db_blood = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group)
+    if db_blood is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Blood group not found")
+    
+    if(db_blood.first().platelets < request.quantity or db_blood.first().plasma < request.quantity or db_blood.first().rbc < request.quantity):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Blood not available")
+    
+    if request.blood_component == 'Platelets':
+        db_blood.first().platelets -= request.quantity
+    elif request.blood_component == 'Plasma':
+        db_blood.first().plasma -= request.quantity
+    elif request.blood_component == 'RBC':
+        db_blood.first().rbc -= request.quantity
+    else:
+        db_blood.first().platelets -= request.quantity
+        db_blood.first().plasma -= request.quantity
+        db_blood.first().rbc -= request.quantity
+
+    request.status = 'Success'
+
+    db.commit()
+
     return Response(status_code=status.HTTP_201_CREATED)
+
+@router.get('/pending_request/')
+def get_pending_requests(db: Session = Depends(get_db)):
+    requests = db.query(models.Request).filter(models.Request.status == 'Pending').all()
+    return requests
+
+@router.get('/pending_request/{hospital_id}/', response_model=list[schemas.Request])
+def get_pending_requests_by_hospital_ID(hospital_id: str,db: Session = Depends(get_db)):
+    requests = db.query(models.Request).filter(models.Request.hospital_id == hospital_id).filter(models.Request.status == 'Pending').all()
+    return requests
+
+# Successful Request
+
+@router.get('/successful_request/{hospital_id}/', response_model=list[schemas.Request])
+def get_successful_requests(hospital_id: str,db: Session = Depends(get_db)):
+    requests = db.query(models.Request).filter(models.Request.hospital_id == hospital_id).filter(models.Request.status == 'Success').all()
+    return requests
 
 @router.get('/{hospital_id}', response_model=list[schemas.Request])
 def get_requests_by_hospital_id(hospital_id: str, db: Session = Depends(get_db)):
@@ -35,7 +71,6 @@ def get_requests_by_hospital_id(hospital_id: str, db: Session = Depends(get_db))
     if not requests:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Requests not found")
     return requests
-
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
 def create_request(request: schemas.RequestBase, db: Session = Depends(get_db)):
@@ -46,24 +81,20 @@ def create_request(request: schemas.RequestBase, db: Session = Depends(get_db)):
 
     request_id = generate_id(request.blood_group, db)
 
-    db_platelets = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group, models.Repository.blood_component == 'Platelets')
+    db_blood = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group)
     
-    db_plasma = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group, models.Repository.blood_component == 'Plasma')
-        
-    db_rbc = db.query(models.Repository).filter(models.Repository.blood_group == request.blood_group, models.Repository.blood_component == 'RBC')
+    req_status = 'Success'
+    if request.blood_component == 'Platelets' and db_blood.first().platelets < request.quantity:
+            req_status = 'Pending'
     
-    status = 'Success'
-    if request.blood_component == 'Platelets' and db_platelets.count() < request.quantity:
-            status = 'Pending'
-    
-    if request.blood_component == 'Plasma' and db_plasma.count() < request.quantity:
-            status = 'Pending'
+    if request.blood_component == 'Plasma' and db_blood.first().plasma < request.quantity:
+            req_status = 'Pending'
 
-    if request.blood_component == 'RBC' and db_rbc.count() < request.quantity:
-            status = 'Pending'
+    if request.blood_component == 'RBC' and db_blood.first().rbc < request.quantity:
+            req_status = 'Pending'
     
-    if request.blood_component == 'Whole Blood' and (db_rbc.count() < request.quantity or db_plasma.count() < request.quantity or db_platelets.count() < request.quantity):
-            status = 'Pending'
+    if request.blood_component == 'Whole Blood' and (db_blood.first().platelets < request.quantity or db_blood.first().plasma < request.quantity or db_blood.first().rbc < request.quantity):
+            req_status = 'Pending'
     
     new_request = models.Request(
         request_id=request_id, 
@@ -72,23 +103,23 @@ def create_request(request: schemas.RequestBase, db: Session = Depends(get_db)):
         blood_group=request.blood_group, 
         blood_component=request.blood_component,
         quantity=request.quantity,
-        status = status)
+        status = req_status)
 
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
 
-    if status == 'Success':
+    if req_status == 'Success':
         if request.blood_component == 'Platelets':
-            db_platelets.update(quantity = db_platelets.count() - request.quantity)
+            db_blood.first().platelets -= request.quantity
         elif request.blood_component == 'Plasma':
-            db_plasma.update(quantity = db_plasma.count() - request.quantity)
+            db_blood.first().plasma -= request.quantity
         elif request.blood_component == 'RBC':
-            db_rbc.update(quantity = db_rbc.count() - request.quantity)
+            db_blood.first().rbc -= request.quantity
         else:
-            db_platelets.update(quantity = db_platelets.count() - request.quantity)
-            db_plasma.update(quantity = db_plasma.count() - request.quantity)
-            db_rbc.update(quantity = db_rbc.count() - request.quantity)
+            db_blood.first().platelets -= request.quantity
+            db_blood.first().plasma -= request.quantity
+            db_blood.first().rbc -= request.quantity
 
         db.commit()
 

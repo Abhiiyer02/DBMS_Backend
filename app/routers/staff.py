@@ -2,6 +2,7 @@ import schemas, models, utils, oauth2
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from database import get_db
+from datetime import date
 
 router = APIRouter(
     prefix="/staff",
@@ -31,6 +32,8 @@ def create_staff(request: schemas.StaffIn, db: Session = Depends(get_db)):
     if db_staff:
         staff_id = 'ST' + str(int(db_staff.staff_id[2:]) + 1).zfill(4)
     
+    dob = request.dob.split('/') # yyyy/mm/dd
+
     new_staff = models.Staff(
     staff_id=staff_id, 
     name=request.name, 
@@ -39,7 +42,7 @@ def create_staff(request: schemas.StaffIn, db: Session = Depends(get_db)):
     staff_role = request.staff_role,
     blood_group = request.blood_group,
     gender = request.gender,
-    dob = request.dob,
+    dob = date(day=int(dob[2]),month=int(dob[1]),year=int(dob[0])),
     password=utils.hash(request.password))
     db.add(new_staff)
     db.commit()

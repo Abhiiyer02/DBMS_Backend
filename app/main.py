@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, hospitals, staff, requests, donors, donations
+from routers import auth, hospitals, staff, requests, donors, donations, repository
 import models
 from database import engine
 
@@ -27,7 +27,7 @@ app.include_router(staff.router)
 app.include_router(requests.router)
 app.include_router(donors.router)
 app.include_router(donations.router)
-
+app.include_router(repository.router)
 
 @app.get("/")
 async def root():
