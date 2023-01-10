@@ -11,6 +11,8 @@ router = APIRouter(
 
 @router.get('/', response_model=list[schemas.DonorOut])
 def get_donors_by_address_and_blood_group(locality:str = '',blood_group: str = '',db: Session = Depends(get_db)):
+    if(blood_group != '' and blood_group[-1] == 'P'):
+        blood_group = blood_group[:-1] + '+'
     if locality == '' and blood_group == '':
         db_donors = db.query(models.Donor).all()
     elif locality == '':

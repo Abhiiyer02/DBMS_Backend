@@ -77,17 +77,17 @@ class Donation(Base):
     donation_date = Column(Date,nullable=True)
     result = Column(Boolean,nullable=True)
 
-class BloodComponents(Base):
-    __tablename__ = "blood_components"
+# class BloodComponents(Base):
+#     __tablename__ = "blood_components"
 
-    packet_id = Column(String, primary_key=True, index=True,nullable=False)
-    component_type = Column(String)
-    blood_group = Column(String,nullable=True)
-    ext_date = Column(Date,default=datetime.today())
+#     packet_id = Column(String, primary_key=True, index=True,nullable=False)
+#     component_type = Column(String)
+#     blood_group = Column(String,nullable=True)
+#     ext_date = Column(Date,default=datetime.today())
 
-    if component_type == "Plasma":
-        exp_date = Column(Date,default=datetime.today() + timedelta(days=365))
-    elif component_type == "Platelets":
-        exp_date = Column(Date,default=datetime.today() + timedelta(days=5))
-    else:
-        exp_date = Column(Date,default=datetime.today() + timedelta(days=42))
+#     if component_type == "Plasma":
+#         exp_date = Column(Date,default=datetime.today() + timedelta(days=365))
+#     elif component_type == "Platelets":
+#         exp_date = Column(Date,default=datetime.today() + timedelta(days=5))
+#     else:
+#         exp_date = Column(Date,default=datetime.today() + timedelta(days=42))
