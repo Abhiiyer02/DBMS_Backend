@@ -17,7 +17,7 @@ class HospitalOut(HospitalBase):
 
 class StaffBase(BaseModel):
     name: str
-    dob: str
+    dob: date
     address: str
     phone: str
     staff_role: str

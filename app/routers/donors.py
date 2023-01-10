@@ -33,8 +33,12 @@ def get_donors_addresses():
 
     return addresses
 
-@router.post('/', status_code= status.HTTP_201_CREATED + status.HTTP_200_OK)
+@router.post('/', status_code= status.HTTP_201_CREATED)
 def create_donor(request: schemas.DonorBase, db: Session = Depends(get_db)):
+    db_donor = db.query(models.Donor).filter(models.Donor.name == request.name).first()
+
+    if db_donor:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Donor with name {request.name} already exists")
     try:
         phone_number = parse(request.phone, "IN")
     except:
